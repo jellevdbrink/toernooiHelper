@@ -2,6 +2,15 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
+GAME_TYPES = [
+    ('group', 'poulefase'),
+    ('2nd_group', '2e ronde'),
+    ('1_8_final', 'achtste finale'),
+    ('1_4_final', 'kwartfinale'),
+    ('1_2_final', 'halve finale'),
+    ('consolation_final', 'troost finale'),
+    ('final', 'finale'),
+]
 
 class Tournament(models.Model):
     name = models.CharField('naam', max_length=60, unique=True)
@@ -44,16 +53,25 @@ class Participant(models.Model):
         verbose_name_plural = 'deelnemers'
 
 
+class Group(models.Model):
+    tournament = models.ForeignKey(Tournament, models.CASCADE, verbose_name='toernooi')
+
+    class Meta:
+        verbose_name = 'poule'
+        verbose_name_plural = 'poules'
+
+
+class Round(models.Model):
+    tournament = models.ForeignKey(Tournament, models.CASCADE, verbose_name='toernooi')
+    type = models.CharField('type', max_length=30, choices=GAME_TYPES, read_only=True)
+    
+
+    class Meta:
+        verbose_name = 'ronde'
+        verbose_name_plural = 'rondes'
+
+
 class Game(models.Model):
-    GAME_TYPES = [
-        ('group', 'poulefase'),
-        ('2nd_group', '1e ronde'),
-        ('1_8_final', 'achtste finale'),
-        ('1_4_final', 'kwartfinale'),
-        ('1_2_final', 'halve finale'),
-        ('consolation_final', 'troost finale'),
-        ('final', 'finale'),
-    ]
     BRACKETS = [
         ('winners', 'winnaars'),
         ('losers', 'verliezers'),
@@ -62,11 +80,10 @@ class Game(models.Model):
     home_team_score = models.SmallIntegerField('score thuis team', blank=True)
     away_team = models.ForeignKey(Team, models.PROTECT, related_name='related_away_team', verbose_name='uit team')
     away_team_score = models.SmallIntegerField('score uit team', blank=True)
-    type = models.CharField('type', max_length=30, choices=GAME_TYPES, default='group')
     round = models.CharField('ronde', max_length=30, choices=BRACKETS, blank=True)
     field = models.PositiveSmallIntegerField('veld', validators=[MinValueValidator(1)])
 
-    def get_result(self):
+    def get_winner(self):
         if self.home_team_score and self.away_team_score:
             if self.home_team_score == self.away_team_score:
                 return 0
